@@ -15,6 +15,13 @@ find_package(catkin
     realtime_tools
     control_msgs
     trajectory_msgs
+    festo_workplace_driver
+    hardware_interface
+    industrial_msgs
+    industrial_utils
+    simple_message
+    festo_msgs
+    industrial_robot_client
 )
 
 # Declare catkin package
@@ -30,11 +37,22 @@ catkin_package(
   realtime_tools
   control_msgs
   trajectory_msgs
+  festo_workplace_driver
+  hardware_interface
+  industrial_msgs
+  industrial_utils
+  simple_message
+  festo_msgs
+  industrial_robot_client
+
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )
 
-include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
+include_directories(include
+    ${Boost_INCLUDE_DIR}
+    ${catkin_INCLUDE_DIRS}
+    )
 
 add_library(${PROJECT_NAME} src/joint_trajectory_controller.cpp
                             include/joint_trajectory_controller/hardware_interface_adapter.h

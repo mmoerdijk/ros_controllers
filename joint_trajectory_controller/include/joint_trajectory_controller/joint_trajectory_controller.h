@@ -64,7 +64,7 @@
 
 // ros_controls
 #include <realtime_tools/realtime_server_goal_handle.h>
-#include <controller_interface/controller.h>
+#include <controller_interface/multi_interface_controller.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/internal/demangle_symbol.h>
 
@@ -74,6 +74,8 @@
 #include <joint_trajectory_controller/joint_trajectory_segment.h>
 #include <joint_trajectory_controller/init_joint_trajectory.h>
 #include <joint_trajectory_controller/hardware_interface_adapter.h>
+
+#include "workplace_control/festo_status_handle.h"
 
 namespace joint_trajectory_controller
 {
@@ -124,7 +126,7 @@ namespace joint_trajectory_controller
  * out-of-the-box.
  */
 template <class SegmentImpl, class HardwareInterface>
-class JointTrajectoryController : public controller_interface::Controller<HardwareInterface>
+class JointTrajectoryController : public controller_interface::MultiInterfaceController<HardwareInterface>
 {
 public:
 
@@ -147,6 +149,7 @@ public:
   /*\}*/
 
 private:
+  double axis_end_pos_ ;
 
   struct TimeData
   {
@@ -179,6 +182,7 @@ private:
 
   bool                      verbose_;            ///< Hard coded verbose flag to help in debugging
   std::string               name_;               ///< Controller name.
+  hardware_interface::FestoStatusHandle cobot_status_ ;
   std::vector<JointHandle>  joints_;             ///< Handles to controlled joints.
   std::vector<bool>         angle_wraparound_;   ///< Whether controlled joints wrap around or not.
   std::vector<std::string>  joint_names_;        ///< Controlled joint names.

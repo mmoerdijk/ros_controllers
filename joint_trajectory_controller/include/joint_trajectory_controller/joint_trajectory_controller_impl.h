@@ -182,7 +182,7 @@ template <class SegmentImpl, class HardwareInterface>
 JointTrajectoryController<SegmentImpl, HardwareInterface>::
 JointTrajectoryController()
   : verbose_(false), // Set to true during debugging
-    hold_trajectory_ptr_(new Trajectory)
+    hold_trajectory_ptr_(new Trajectory), axis_end_pos_(0)
 {
   // The verbose parameter is for advanced use as it breaks real-time safety
   // by enabling ROS logging services
@@ -201,6 +201,8 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
                                                                      ros::NodeHandle&   controller_nh)
 {
   using namespace internal;
+
+
 
   // Cache controller node handle
   controller_nh_ = controller_nh;
@@ -253,6 +255,8 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
   assert(n_joints == urdf_joints.size());
 
   // Initialize members
+  cobot_status_ = hw->get<hardware_interface::FestoStatusHandle>("festo_status");
+
   joints_.resize(n_joints);
   angle_wraparound_.resize(n_joints);
   for (unsigned int i = 0; i < n_joints; ++i)
@@ -347,6 +351,12 @@ template <class SegmentImpl, class HardwareInterface>
 void JointTrajectoryController<SegmentImpl, HardwareInterface>::
 update(const ros::Time& time, const ros::Duration& period)
 {
+  // TODO: If robot is not in run mode, set the hold position to current position.
+  if(!cobot_status_.modeIsRun()){
+    preemptActiveGoal();
+    //setHoldPosition(time_data->uptime, gh) ;
+  }
+
   // Get currently followed trajectory
   TrajectoryPtr curr_traj_ptr;
   curr_trajectory_box_.get(curr_traj_ptr);
@@ -384,7 +394,16 @@ update(const ros::Time& time, const ros::Duration& period)
     }
     desired_state_.position[i] = desired_joint_state_.position[0];
     desired_state_.velocity[i] = desired_joint_state_.velocity[0];
-    desired_state_.acceleration[i] = desired_joint_state_.acceleration[0]; ;
+    desired_state_.acceleration[i] = desired_joint_state_.acceleration[0];
+
+    //TODO: Remove dirty hack !
+    // The lininear axis requires a end setpoint.
+    // Do not want to reimplement all this :-D
+    if(joint_names_[i].compare("linear_axis") == 0 ){
+
+        desired_state_.position[i] = axis_end_pos_;
+    }
+
 
     state_joint_error_.position[0] = angles::shortest_angular_distance(current_state_.position[i],desired_joint_state_.position[0]);
     state_joint_error_.velocity[0] = desired_joint_state_.velocity[0] - current_state_.velocity[i];
@@ -463,6 +482,7 @@ update(const ros::Time& time, const ros::Duration& period)
     current_active_goal->setSucceeded(current_active_goal->preallocated_result_);
     rt_active_goal_.reset();
     successful_joint_traj_.reset();
+
   }
 
   // Hardware interface adapter: Generate and send commands
@@ -615,6 +635,8 @@ goalCB(GoalHandle gh)
 
   if (update_ok)
   {
+
+
     // Accept new goal
     preemptActiveGoal();
     gh.setAccepted();
@@ -625,6 +647,16 @@ goalCB(GoalHandle gh)
                                                     &RealtimeGoalHandle::runNonRealtime,
                                                     rt_goal);
     goal_handle_timer_.start();
+
+    for(size_t i = 0 ; i < gh.getGoal()->trajectory.joint_names.size() ; i++ ){
+
+        if( std::string(gh.getGoal()->trajectory.joint_names[i].c_str()).compare("linear_axis") == 0 ){
+            axis_end_pos_ = gh.getGoal()->trajectory.points[gh.getGoal()->trajectory.points.size()-1].positions[i] ;
+            ROS_ERROR("Setting axis goal to: %f", axis_end_pos_);
+        }
+    }
+
+
   }
   else
   {
@@ -757,9 +789,17 @@ setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh)
   {
     hold_start_state_.position[0]     =  joints_[i].getPosition();
     hold_start_state_.velocity[0]     =  joints_[i].getVelocity();
-    hold_start_state_.acceleration[0] =  0.0;
+    // TODO: this is a bug!
+    hold_start_state_.acceleration[0] =  0;
 
     hold_end_state_.position[0]       =  joints_[i].getPosition();
+
+    // TODO: Remove this tmp hack for the lin axes
+    if(joint_names_[i].compare("linear_axis") == 0 ){
+        axis_end_pos_ = joints_[i].getPosition();
+    }
+
+
     hold_end_state_.velocity[0]       = -joints_[i].getVelocity();
     hold_end_state_.acceleration[0]   =  0.0;
 

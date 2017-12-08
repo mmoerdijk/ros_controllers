@@ -29,6 +29,12 @@
   <depend>roscpp</depend>
   <depend>trajectory_msgs</depend>
   <depend>urdf</depend>
+  <depend>festo_workplace_driver</depend>
+  <depend>industrial_robot_client</depend>
+  <depend>festo_msgs</depend>
+  <depend>simple_message</depend>
+  <depend>industrial_msgs</depend>
+  <depend>industrial_utils</depend>
 
   <test_depend>rostest</test_depend>
   <test_depend>controller_manager</test_depend>
