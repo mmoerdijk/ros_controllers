@@ -182,7 +182,7 @@ template <class SegmentImpl, class HardwareInterface>
 JointTrajectoryController<SegmentImpl, HardwareInterface>::
 JointTrajectoryController()
   : verbose_(false), // Set to true during debugging
-    hold_trajectory_ptr_(new Trajectory), axis_end_pos_(0)
+    hold_trajectory_ptr_(new Trajectory), axis_end_pos_(0), axis_end_time_(0)
 {
   // The verbose parameter is for advanced use as it breaks real-time safety
   // by enabling ROS logging services
@@ -255,7 +255,7 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
   assert(n_joints == urdf_joints.size());
 
   // Initialize members
-  cobot_status_ = hw->get<hardware_interface::FestoStatusHandle>("festo_status");
+ // cobot_status_ = hw->get<hardware_interface::FestoStatusHandle>("festo_status");
 
   joints_.resize(n_joints);
   angle_wraparound_.resize(n_joints);
@@ -352,10 +352,10 @@ void JointTrajectoryController<SegmentImpl, HardwareInterface>::
 update(const ros::Time& time, const ros::Duration& period)
 {
   // TODO: If robot is not in run mode, set the hold position to current position.
-  if(!cobot_status_.modeIsRun()){
-    preemptActiveGoal();
-    //setHoldPosition(time_data->uptime, gh) ;
-  }
+//  if(!cobot_status_.modeIsRun()){
+//    preemptActiveGoal();
+//    //setHoldPosition(time_data->uptime, gh) ;
+//  }
 
   // Get currently followed trajectory
   TrajectoryPtr curr_traj_ptr;
@@ -402,6 +402,7 @@ update(const ros::Time& time, const ros::Duration& period)
     if(joint_names_[i].compare("linear_axis") == 0 ){
 
         desired_state_.position[i] = axis_end_pos_;
+        desired_state_.acceleration[i] = axis_end_time_;
     }
 
 
@@ -652,7 +653,10 @@ goalCB(GoalHandle gh)
 
         if( std::string(gh.getGoal()->trajectory.joint_names[i].c_str()).compare("linear_axis") == 0 ){
             axis_end_pos_ = gh.getGoal()->trajectory.points[gh.getGoal()->trajectory.points.size()-1].positions[i] ;
+            axis_end_time_ = gh.getGoal()->trajectory.points[gh.getGoal()->trajectory.points.size()-1].time_from_start.toSec() ;
+
             ROS_ERROR("Setting axis goal to: %f", axis_end_pos_);
+            ROS_ERROR("Setting axis endtime to: %f", axis_end_time_);
         }
     }
 
@@ -797,6 +801,7 @@ setHoldPosition(const ros::Time& time, RealtimeGoalHandlePtr gh)
     // TODO: Remove this tmp hack for the lin axes
     if(joint_names_[i].compare("linear_axis") == 0 ){
         axis_end_pos_ = joints_[i].getPosition();
+
     }
 
 
