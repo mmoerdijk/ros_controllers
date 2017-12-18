@@ -466,6 +466,10 @@ update(const ros::Time& time, const ros::Duration& period)
             checkStateTolerancePerJoint(state_joint_error_, tolerances.goal_state_tolerance, true);
           }
 
+          ROS_ERROR_STREAM_NAMED(name_,"Goal tolerances failed for joint: "<< joint_names_[i]);
+          // Check the tolerances one more time to output the errors that occurs
+          checkStateTolerancePerJoint(state_joint_error_, tolerances.goal_state_tolerance, true);
+
           rt_segment_goal->preallocated_result_->error_code = control_msgs::FollowJointTrajectoryResult::GOAL_TOLERANCE_VIOLATED;
           rt_segment_goal->setAborted(rt_segment_goal->preallocated_result_);
           rt_active_goal_.reset();

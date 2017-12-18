@@ -75,7 +75,7 @@
 #include <joint_trajectory_controller/init_joint_trajectory.h>
 #include <joint_trajectory_controller/hardware_interface_adapter.h>
 
-#include "workplace_control/festo_status_handle.h"
+
 
 namespace joint_trajectory_controller
 {
